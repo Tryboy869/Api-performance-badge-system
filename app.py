@@ -1,5 +1,5 @@
-# API Performance Badges - FastAPI Pure (ILN Style)
-# Zéro dépendances externes excepté FastAPI
+# API Performance Badges - ILN Architecture (VERSION CORRIGÉE)
+# Fichier unique contenant toute la logique métier
 
 from fastapi import FastAPI, HTTPException
 from typing import List, Dict, Optional
@@ -8,13 +8,13 @@ import asyncio
 import time
 
 # =============================================================================
-# APPLICATION FASTAPI
+# PARADIGME ILN : Base Python + ML + Event + Roadmapex
 # =============================================================================
 
 app = FastAPI(
     title="API Performance Badges Engine",
     description="Système intelligent de certification des APIs",
-    version="1.0.0"
+    version="1.0.1"  # Version mise à jour
 )
 
 # =============================================================================
@@ -257,6 +257,87 @@ def get_historical_metrics(api_id: str):
     
     return historical
 
+def validate_metrics_data(metrics: dict):
+    """🔧 NOUVELLE FONCTION : Validation complète des données d'entrée"""
+    
+    # Vérification champs obligatoires
+    required_fields = [
+        'api_id', 'uptime_percentage', 'avg_response_time', 
+        'total_requests', 'error_rate', 'active_users', 'security_score'
+    ]
+    
+    missing_fields = [field for field in required_fields if field not in metrics]
+    
+    if missing_fields:
+        raise HTTPException(
+            status_code=400, 
+            detail={
+                "error": "Missing required fields",
+                "missing_fields": missing_fields,
+                "required_fields": required_fields,
+                "received_fields": list(metrics.keys()),
+                "timestamp": get_current_timestamp()
+            }
+        )
+    
+    # Validation types et valeurs
+    validations = [
+        # Uptime
+        (isinstance(metrics.get('uptime_percentage'), (int, float)), 
+         "uptime_percentage must be numeric"),
+        (0 <= metrics.get('uptime_percentage', -1) <= 100, 
+         "uptime_percentage must be between 0 and 100"),
+        
+        # Response time
+        (isinstance(metrics.get('avg_response_time'), (int, float)), 
+         "avg_response_time must be numeric"),
+        (metrics.get('avg_response_time', -1) >= 0, 
+         "avg_response_time must be >= 0"),
+        
+        # Total requests
+        (isinstance(metrics.get('total_requests'), int), 
+         "total_requests must be integer"),
+        (metrics.get('total_requests', -1) >= 0, 
+         "total_requests must be >= 0"),
+        
+        # Error rate
+        (isinstance(metrics.get('error_rate'), (int, float)), 
+         "error_rate must be numeric"),
+        (0 <= metrics.get('error_rate', -1) <= 100, 
+         "error_rate must be between 0 and 100"),
+        
+        # Active users
+        (isinstance(metrics.get('active_users'), int), 
+         "active_users must be integer"),
+        (metrics.get('active_users', -1) >= 0, 
+         "active_users must be >= 0"),
+        
+        # Security score
+        (isinstance(metrics.get('security_score'), (int, float)), 
+         "security_score must be numeric"),
+        (0 <= metrics.get('security_score', -1) <= 10, 
+         "security_score must be between 0 and 10"),
+        
+        # API ID
+        (isinstance(metrics.get('api_id'), str) and len(metrics.get('api_id', '')) > 0, 
+         "api_id must be non-empty string")
+    ]
+    
+    # Vérification de chaque validation
+    for is_valid, error_message in validations:
+        if not is_valid:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "Invalid data format",
+                    "message": error_message,
+                    "received_data": metrics,
+                    "timestamp": get_current_timestamp()
+                }
+            )
+    
+    return True
+
 # =============================================================================
 # INSTANCES GLOBALES
 # =============================================================================
@@ -274,26 +355,22 @@ def root():
     return {
         "service": "API Performance Badges Engine",
         "status": "operational", 
-        "version": "1.0.0",
+        "version": "1.0.1",  # Version corrigée
         "dependencies": "FastAPI only",
-        "timestamp": get_current_timestamp()
+        "timestamp": get_current_timestamp(),
+        "fixes_applied": ["input_validation", "error_handling"]
     }
 
 @app.post("/calculate-badges")
 def calculate_api_badges(metrics: dict):
     """
-    ENDPOINT PRINCIPAL pour Nokia
+    🔧 ENDPOINT PRINCIPAL CORRIGÉ pour Nokia
     Input: Métriques API
     Output: Badges + Commission info
     """
     try:
-        # Validation données d'entrée
-        required_fields = ['api_id', 'uptime_percentage', 'avg_response_time', 
-                          'total_requests', 'error_rate', 'active_users', 'security_score']
-        
-        for field in required_fields:
-            if field not in metrics:
-                raise HTTPException(status_code=400, detail=f"Champ manquant: {field}")
+        # 🔧 VALIDATION COMPLÈTE DES DONNÉES (NOUVEAU)
+        validate_metrics_data(metrics)
         
         # Récupération historique simulé
         historical_data = get_historical_metrics(metrics['api_id'])
@@ -316,46 +393,78 @@ def calculate_api_badges(metrics: dict):
             "business_impact": commission_info,
             "metadata": {
                 "calculated_at": get_current_timestamp(),
-                "algorithm_version": "1.0.0",
-                "processing_time_ms": 25
+                "algorithm_version": "1.0.1",
+                "processing_time_ms": 25,
+                "validation_passed": True
             }
         }
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (erreurs de validation)
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "Badge calculation failed",
                 "message": str(e),
+                "api_id": metrics.get('api_id', 'unknown'),
                 "timestamp": get_current_timestamp()
             }
         )
 
 @app.post("/bulk-calculate")
 def bulk_calculate_badges(api_metrics_list: List[dict]):
-    """Calcul badges en lot"""
+    """🔧 Calcul badges en lot - AVEC VALIDATION"""
     try:
         results = []
+        validation_errors = []
         
-        for metrics in api_metrics_list:
-            historical = get_historical_metrics(metrics['api_id'])
-            badges = badge_engine.calculate_badges(metrics, historical)
-            commission = commission_calc.calculate_commission_impact(len(badges))
-            
-            results.append({
-                "api_id": metrics['api_id'],
-                "badges": badges,
-                "badge_count": len(badges),
-                "commission_info": commission
-            })
+        for i, metrics in enumerate(api_metrics_list):
+            try:
+                # Validation de chaque élément
+                validate_metrics_data(metrics)
+                
+                historical = get_historical_metrics(metrics['api_id'])
+                badges = badge_engine.calculate_badges(metrics, historical)
+                commission = commission_calc.calculate_commission_impact(len(badges))
+                
+                results.append({
+                    "api_id": metrics['api_id'],
+                    "badges": badges,
+                    "badge_count": len(badges),
+                    "commission_info": commission,
+                    "status": "success"
+                })
+                
+            except HTTPException as e:
+                validation_errors.append({
+                    "index": i,
+                    "api_id": metrics.get('api_id', f'unknown-{i}'),
+                    "error": e.detail,
+                    "status": "validation_failed"
+                })
+                continue
+            except Exception as e:
+                validation_errors.append({
+                    "index": i,
+                    "api_id": metrics.get('api_id', f'unknown-{i}'),
+                    "error": str(e),
+                    "status": "processing_failed"
+                })
+                continue
         
         return {
-            "success": True,
+            "success": len(results) > 0,
             "processed_apis": len(api_metrics_list),
+            "successful_processing": len(results),
+            "failed_processing": len(validation_errors),
             "results": results,
+            "errors": validation_errors,
             "processing_summary": {
                 "total_badges_awarded": sum(r["badge_count"] for r in results),
                 "avg_badges_per_api": round(sum(r["badge_count"] for r in results) / len(results), 2) if results else 0,
+                "success_rate": f"{(len(results)/len(api_metrics_list)*100):.1f}%" if api_metrics_list else "0%",
                 "processed_at": get_current_timestamp()
             }
         }
@@ -377,6 +486,21 @@ def get_badge_rules():
             "confidence_threshold": 0.85,
             "weighting_strategy": "temporal_decay",
             "evaluation_method": "geometric_mean"
+        },
+        "validation_rules": {
+            "required_fields": [
+                "api_id", "uptime_percentage", "avg_response_time",
+                "total_requests", "error_rate", "active_users", "security_score"
+            ],
+            "field_constraints": {
+                "uptime_percentage": "0-100 (numeric)",
+                "avg_response_time": ">= 0 (numeric)",
+                "total_requests": ">= 0 (integer)",
+                "error_rate": "0-100 (numeric)", 
+                "active_users": ">= 0 (integer)",
+                "security_score": "0-10 (numeric)",
+                "api_id": "non-empty string"
+            }
         }
     }
 
@@ -394,6 +518,118 @@ def test_with_sample_data():
     }
     
     return calculate_api_badges(sample_metrics)
+
+@app.post("/test-validation")
+def test_validation_errors():
+    """🔧 NOUVEAU : Endpoint pour tester la validation"""
+    
+    # Test données incomplètes
+    incomplete_data = {"api_id": "test-incomplete", "uptime_percentage": 99.0}
+    
+    try:
+        validate_metrics_data(incomplete_data)
+        return {"validation": "should_have_failed", "status": "error"}
+    except HTTPException as e:
+        return {
+            "validation": "correctly_failed", 
+            "status": "success",
+            "error_details": e.detail,
+            "test_data": incomplete_data
+        }
+
+# =============================================================================
+# 🎁 BONUS: ENDPOINT DEMO POUR POC VISUEL
+# =============================================================================
+
+@app.get("/demo-data")
+def get_demo_data_for_poc():
+    """🎁 NOUVEAU : Données démo pour le POC visuel Gemini"""
+    
+    demo_apis = [
+        {
+            "api_id": "openai-gpt4",
+            "name": "OpenAI GPT-4 API",
+            "description": "Advanced AI language model with superior reasoning",
+            "category": "AI/ML",
+            "pricing": "$0.03/1K tokens",
+            "badges": ["🟢 Trusted API", "⚡ Lightning Fast", "🛡️ Enterprise Ready", "👥 Community Proven"],
+            "commission_tier": "premium",
+            "metrics": {
+                "uptime": 99.95,
+                "response_time": 45,
+                "users": 15000
+            }
+        },
+        {
+            "api_id": "weather-pro",
+            "name": "WeatherPro Global API", 
+            "description": "Accurate weather data for 200+ countries",
+            "category": "Weather",
+            "pricing": "$0.001/request",
+            "badges": ["🟢 Trusted API", "🚀 Blazing Speed", "📊 High Volume Ready"],
+            "commission_tier": "standard",
+            "metrics": {
+                "uptime": 99.8,
+                "response_time": 35,
+                "users": 8500
+            }
+        },
+        {
+            "api_id": "payment-secure",
+            "name": "SecurePay Processing",
+            "description": "PCI-compliant payment processing API",
+            "category": "Payments",
+            "pricing": "$0.30/transaction",
+            "badges": ["🛡️ Enterprise Ready", "🔒 Security Certified", "💎 Zero Downtime"],
+            "commission_tier": "premium",
+            "metrics": {
+                "uptime": 99.99,
+                "response_time": 120,
+                "users": 3200
+            }
+        },
+        {
+            "api_id": "basic-translator",
+            "name": "Quick Translate API",
+            "description": "Simple text translation service",
+            "category": "Translation",
+            "pricing": "Free tier available",
+            "badges": [],
+            "commission_tier": "basic",
+            "metrics": {
+                "uptime": 96.5,
+                "response_time": 300,
+                "users": 150
+            }
+        },
+        {
+            "api_id": "social-analytics",
+            "name": "SocialMetrics Analytics",
+            "description": "Comprehensive social media analytics platform",
+            "category": "Analytics", 
+            "pricing": "$29/month",
+            "badges": ["🟢 Trusted API", "👥 Community Proven"],
+            "commission_tier": "standard",
+            "metrics": {
+                "uptime": 99.2,
+                "response_time": 180,
+                "users": 2100
+            }
+        }
+    ]
+    
+    return {
+        "demo_apis": demo_apis,
+        "badge_definitions": badge_engine.badge_rules,
+        "total_apis": len(demo_apis),
+        "badged_apis": len([api for api in demo_apis if api["badges"]]),
+        "commission_tiers": {
+            "basic": {"rate": "20%", "color": "#gray"},
+            "standard": {"rate": "22-25%", "color": "#blue"}, 
+            "premium": {"rate": "26-30%", "color": "#gold"}
+        },
+        "generated_at": get_current_timestamp()
+    }
 
 # =============================================================================
 # DÉMARRAGE
