@@ -1,29 +1,5 @@
-# ILN Absorbed Paradigms - Python Dependencies
-# Pour les paradigmes ml!(python) et data_analysis absorbés en JS
-
-# Core data processing (paradigme absorbé)
-pandas==2.1.1
-numpy==1.24.3
-
-# ML capabilities (paradigme ml! absorbé) 
-scikit-learn==1.3.0
-scipy==1.11.3
-
-# API analysis (paradigme api_processing)
-requests==2.31.0
-aiohttp==3.9.0
-
-# Performance monitoring
-psutil==5.9.6
-
-# Optional: Advanced ML (si besoin)
-# tensorflow==2.15.0
-# torch==2.1.0
-
-# Development tools
-pytest==7.4.3
-black==23.10.1
-
-# Note: Ces deps sont pour développement local des algorithmes
-# L'extension JS finale n'a pas besoin d'environnement Python
-# Les paradigmes sont "absorbés" = convertis en logique JS pure
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+python-multipart==0.0.6
+httpx==0.25.2
