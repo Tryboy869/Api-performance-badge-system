@@ -1,640 +1,773 @@
-# API Performance Badges - ILN Architecture (VERSION CORRIGÉE)
-# Fichier unique contenant toute la logique métier
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RapidAPI - POC Badges de Performance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <style>
+        :root {
+            --rapidapi-blue: #0066CC;
+            --rapidapi-dark-blue: #004c99;
+            --light-gray: #F5F7FA;
+            --medium-gray: #E1E8ED;
+            --dark-gray: #5A738E;
+            --text-color: #111827;
+            --text-light: #6B7280;
+            --white: #FFFFFF;
+            --premium-gold: #FFD700;
+            --premium-gold-dark: #daa520;
+            --premium-revenue-color: #0d874b;
 
-from fastapi import FastAPI, HTTPException
-from typing import List, Dict, Optional
-import json
-import asyncio
-import time
+            /* Badge Colors */
+            --badge-trusted-bg: #E6F4EA;
+            --badge-trusted-text: #0A7D37;
+            --badge-fast-bg: #FFF4E5;
+            --badge-fast-text: #FF8A00;
+            --badge-blazing-bg: #FFECEB;
+            --badge-blazing-text: #E53935;
+            --badge-enterprise-bg: #EBF5FF;
+            --badge-enterprise-text: #0052CC;
+            --badge-community-bg: #F3E8FF;
+            --badge-community-text: #6A1B9A;
+            --badge-downtime-bg: linear-gradient(135deg, #FFD700, #F0B400);
+            --badge-downtime-text: #4C3D00;
+            --badge-security-bg: #F1F3F5;
+            --badge-security-text: #212529;
+            --badge-volume-bg: #D4EDDA;
+            --badge-volume-text: #155724;
+        }
 
-# =============================================================================
-# PARADIGME ILN : Base Python + ML + Event + Roadmapex
-# =============================================================================
+        /* --- Global & Reset --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-app = FastAPI(
-    title="API Performance Badges Engine",
-    description="Système intelligent de certification des APIs",
-    version="1.0.1"  # Version mise à jour
-)
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-gray);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        
+        /* --- Loader --- */
+        .loader-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 50vh;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--rapidapi-blue);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-# =============================================================================
-# MODÈLES DE DONNÉES (Pure Python Dict)
-# =============================================================================
 
-def create_api_metrics(api_id: str, uptime: float, response_time: float, 
-                      requests: int, error_rate: float, users: int, security: float):
-    """Factory pour créer métriques API"""
-    return {
-        "api_id": api_id,
-        "uptime_percentage": uptime,
-        "avg_response_time": response_time,
-        "total_requests": requests,
-        "error_rate": error_rate,
-        "active_users": users,
-        "security_score": security,
-        "timestamp": get_current_timestamp()
-    }
+        /* --- Main Layout (Mobile First) --- */
+        .poc-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
 
-def create_badge(badge_id: str, name: str, icon: str, description: str, 
-                criteria: dict, confidence: float):
-    """Factory pour créer badge"""
-    return {
-        "id": badge_id,
-        "name": name,
-        "icon": icon,
-        "description": description,
-        "criteria": criteria,
-        "earned_at": get_current_timestamp(),
-        "confidence_score": confidence
-    }
+        .main-wrapper {
+            display: flex;
+            flex-grow: 1;
+        }
 
-# =============================================================================
-# MOTEUR DE CALCUL BADGES (Pure Python)
-# =============================================================================
+        /* --- Header --- */
+        .header {
+            background-color: var(--white);
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--medium-gray);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .header-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--rapidapi-blue);
+            text-decoration: none;
+        }
+        .header-logo i { margin-right: 8px; }
+        .mobile-menu-toggle {
+            display: block;
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--rapidapi-blue);
+        }
 
-class BadgeCalculationEngine:
-    def __init__(self):
-        # Configuration badges avec critères objectifs
-        self.badge_rules = {
-            'trusted_api': {
-                'name': 'Trusted API',
-                'icon': '🟢',
-                'description': '99%+ uptime verified over 30 days',
-                'criteria': {'uptime': 99.0, 'min_requests': 1000}
-            },
-            'lightning_fast': {
-                'name': 'Lightning Fast',
-                'icon': '⚡',
-                'description': 'Average response time under 100ms',
-                'criteria': {'response_time': 100, 'min_requests': 500}
-            },
-            'blazing_speed': {
-                'name': 'Blazing Speed',
-                'icon': '🚀',
-                'description': 'Average response time under 50ms',
-                'criteria': {'response_time': 50, 'min_requests': 200}
-            },
-            'enterprise_ready': {
-                'name': 'Enterprise Ready',
-                'icon': '🛡️',
-                'description': '99.9%+ uptime with high security score',
-                'criteria': {'uptime': 99.9, 'security_score': 8.0, 'min_requests': 2000}
-            },
-            'community_proven': {
-                'name': 'Community Proven',
-                'icon': '👥',
-                'description': '1000+ active users with reliable performance',
-                'criteria': {'active_users': 1000, 'uptime': 95.0}
-            },
-            'zero_downtime': {
-                'name': 'Zero Downtime',
-                'icon': '💎',
-                'description': '99.99%+ uptime - mission critical grade',
-                'criteria': {'uptime': 99.99, 'min_requests': 5000}
-            },
-            'security_certified': {
-                'name': 'Security Certified',
-                'icon': '🔒',
-                'description': 'Exceptional security score with low error rate',
-                'criteria': {'security_score': 9.0, 'error_rate': 1.0}
-            },
-            'high_volume': {
-                'name': 'High Volume Ready',
-                'icon': '📊',
-                'description': 'Handles 10K+ requests reliably',
-                'criteria': {'min_requests': 10000, 'uptime': 98.0}
+        /* --- Sidebar (Hidden on Mobile by default) --- */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100%;
+            background-color: var(--white);
+            border-right: 1px solid var(--medium-gray);
+            padding: 1.5rem 1rem;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1100;
+            overflow-y: auto;
+        }
+        .sidebar.is-open {
+            transform: translateX(0);
+        }
+        .sidebar-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .sidebar-section { margin-bottom: 2rem; }
+        .sidebar-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            letter-spacing: 0.5px;
+        }
+        .filter-list { list-style: none; }
+        .filter-item { margin-bottom: 0.5rem; }
+        .filter-item a {
+            display: block;
+            text-decoration: none;
+            color: var(--dark-gray);
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .filter-item a:hover {
+            background-color: var(--light-gray);
+            color: var(--rapidapi-blue);
+        }
+        #badge-filters .filter-item a {
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        #badge-filters .filter-item a.active {
+            background-color: var(--badge-enterprise-bg);
+            color: var(--badge-enterprise-text);
+            font-weight: 600;
+            border: 1px solid var(--badge-enterprise-text);
+        }
+        .badge-filter-icon { 
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 10px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            flex-grow: 1;
+            padding: 1rem;
+            width: 100%;
+        }
+
+        .content-header {
+            margin-bottom: 1.5rem;
+        }
+        .search-bar-wrapper {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        .search-bar-wrapper i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+        #search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--medium-gray);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        #search-input:focus {
+            outline: none;
+            border-color: var(--rapidapi-blue);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
+        }
+
+        .controls-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toggle-switch label { cursor: pointer; }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--medium-gray);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; width: 16px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--rapidapi-blue); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .sort-button {
+            padding: 0.5rem 1rem;
+            background-color: var(--white);
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .sort-button:hover { background-color: var(--light-gray); }
+
+        /* --- API Grid --- */
+        .api-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        /* --- API Card --- */
+        .api-card {
+            background-color: var(--white);
+            border: 1px solid var(--medium-gray);
+            border-radius: 12px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            transition: box-shadow 0.3s, transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .api-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .api-card.is-premium {
+            border: 2px solid var(--premium-gold);
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+        .api-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--rapidapi-blue);
+        }
+        .api-pricing {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-light);
+            background: var(--light-gray);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+        }
+        .api-description {
+            font-size: 0.95rem;
+            color: var(--dark-gray);
+            margin-bottom: 1rem;
+            flex-grow: 1;
+        }
+        
+        /* Badges Section */
+        .badges-section {
+            border-top: 1px solid var(--medium-gray);
+            padding-top: 1rem;
+            margin-top: auto;
+        }
+        .badges-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .badges-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .badge-counter {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+        .badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: default;
+        }
+        .badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .badge i { margin-right: 6px; }
+
+        /* Individual Badge Styles */
+        .badge.badge-trusted { background-color: var(--badge-trusted-bg); color: var(--badge-trusted-text); }
+        .badge.badge-fast { background-color: var(--badge-fast-bg); color: var(--badge-fast-text); }
+        .badge.badge-blazing { background-color: var(--badge-blazing-bg); color: var(--badge-blazing-text); }
+        .badge.badge-enterprise { background-color: var(--badge-enterprise-bg); color: var(--badge-enterprise-text); }
+        .badge.badge-community { background-color: var(--badge-community-bg); color: var(--badge-community-text); }
+        .badge.badge-downtime { background: var(--badge-downtime-bg); color: var(--badge-downtime-text); }
+        .badge.badge-security { background-color: var(--badge-security-bg); color: var(--badge-security-text); }
+        .badge.badge-volume { background-color: var(--badge-volume-bg); color: var(--badge-volume-text); }
+
+        /* "Wow" Factors */
+        .revenue-indicator {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--premium-revenue-color);
+            background-color: rgba(13, 135, 75, 0.1);
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            margin-top: 4px;
+        }
+        .trust-score {
+            margin-top: 1rem;
+        }
+        .trust-score-label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-light);
+            margin-bottom: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: var(--medium-gray);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: var(--rapidapi-blue);
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
+        }
+        
+        /* --- Tooltip --- */
+        .tooltip {
+            position: fixed;
+            background-color: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s;
+            z-index: 1200;
+            pointer-events: none;
+            max-width: 250px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        /* --- Desktop & Tablet Media Queries --- */
+        @media (min-width: 768px) {
+            .mobile-menu-toggle, .sidebar-close-btn { display: none; }
+            .sidebar {
+                position: sticky;
+                top: 0; /* Align with bottom of header */
+                height: 100vh;
+                transform: translateX(0);
+                flex-shrink: 0;
+                padding-top: 70px; /* Space for fixed header */
+            }
+            .poc-container {
+                flex-direction: row;
+            }
+            .main-content {
+                padding: 1.5rem 2rem;
+            }
+            .main-wrapper {
+                flex-direction: column;
+                flex-grow: 1;
+            }
+            .header {
+                position: sticky;
+                top: 0;
+                width: 100%;
+            }
+            .api-grid {
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            }
+            .controls-wrapper {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
             }
         }
-    
-    def calculate_badges(self, metrics: dict, historical_data: list = None):
-        """Calcul badges avec algorithmes pure Python"""
-        if historical_data is None:
-            historical_data = []
-        
-        earned_badges = []
-        
-        # Calcul moyennes pondérées
-        avg_metrics = self._calculate_weighted_averages(metrics, historical_data)
-        
-        # Évaluation chaque badge
-        for badge_id, badge_config in self.badge_rules.items():
-            confidence = self._evaluate_badge_criteria(avg_metrics, badge_config['criteria'])
-            
-            if confidence >= 0.85:  # Seuil confiance 85%
-                badge = create_badge(
-                    badge_id=badge_id,
-                    name=badge_config['name'],
-                    icon=badge_config['icon'],
-                    description=badge_config['description'],
-                    criteria=badge_config['criteria'],
-                    confidence=round(confidence, 2)
-                )
-                earned_badges.append(badge)
-        
-        return earned_badges
-    
-    def _calculate_weighted_averages(self, current: dict, historical: list):
-        """Calcul moyennes avec pondération temporelle"""
-        if not historical:
-            return {
-                'uptime_percentage': current['uptime_percentage'],
-                'avg_response_time': current['avg_response_time'],
-                'error_rate': current['error_rate'],
-                'active_users': current['active_users'],
-                'total_requests': current['total_requests'],
-                'security_score': current['security_score']
-            }
-        
-        # Pondération décroissante
-        weights = [0.95 ** i for i in range(len(historical))]
-        total_weight = sum(weights) + 1.0
-        
-        metrics_keys = ['uptime_percentage', 'avg_response_time', 'error_rate', 'security_score']
-        weighted_avg = {}
-        
-        for key in metrics_keys:
-            weighted_sum = current[key] * 1.0
-            
-            for i, hist in enumerate(historical):
-                if key in hist:
-                    weighted_sum += hist[key] * weights[i]
-            
-            weighted_avg[key] = weighted_sum / total_weight
-        
-        # Valeurs absolues (non moyennées)
-        weighted_avg['active_users'] = current['active_users']
-        weighted_avg['total_requests'] = current['total_requests']
-        
-        return weighted_avg
-    
-    def _evaluate_badge_criteria(self, metrics: dict, criteria: dict):
-        """Évaluation probabiliste des critères"""
-        scores = []
-        
-        for criterion, threshold in criteria.items():
-            if criterion == 'uptime':
-                score = min(1.0, metrics['uptime_percentage'] / threshold)
-            elif criterion == 'response_time':
-                score = min(1.0, threshold / max(metrics['avg_response_time'], 1))
-            elif criterion == 'error_rate':
-                actual_error = max(metrics['error_rate'], 0.01)
-                score = min(1.0, threshold / actual_error)
-            elif criterion == 'security_score':
-                score = min(1.0, metrics['security_score'] / threshold)
-            elif criterion == 'min_requests':
-                score = min(1.0, metrics['total_requests'] / threshold)
-            elif criterion == 'active_users':
-                score = min(1.0, metrics['active_users'] / threshold)
-            else:
-                score = 0.5
-            
-            scores.append(max(0.0, score))
-        
-        if not scores:
-            return 0.0
-        
-        # Moyenne géométrique
-        geometric_mean = 1.0
-        for score in scores:
-            geometric_mean *= max(score, 0.01)
-        
-        return geometric_mean ** (1.0 / len(scores))
+    </style>
+</head>
+<body>
 
-# =============================================================================
-# CALCULS COMMISSION (Pure Python)
-# =============================================================================
+    <div class="main-wrapper">
+        <header class="header">
+            <a href="#" class="header-logo"><i class="fa-solid fa-bolt"></i> RapidAPI</a>
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Ouvrir le menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </header>
 
-class CommissionCalculator:
-    def __init__(self):
-        self.base_commission = 0.20
-        self.max_commission = 0.30
-        self.badge_bonus_per_badge = 0.01
-    
-    def calculate_commission_impact(self, badge_count: int):
-        """Calcul impact badges sur commissions"""
-        badge_bonus = min(badge_count * self.badge_bonus_per_badge, 0.10)
-        total_commission = min(self.base_commission + badge_bonus, self.max_commission)
-        revenue_increase = self._estimate_revenue_increase(badge_count)
-        
-        return {
-            "base_commission": self.base_commission,
-            "badge_bonus": badge_bonus,
-            "total_commission": total_commission,
-            "revenue_increase_estimate": revenue_increase
-        }
-    
-    def _estimate_revenue_increase(self, badge_count: int):
-        """Estimation augmentation revenus"""
-        if badge_count == 0:
-            return 0.0
-        elif badge_count <= 2:
-            return 0.25
-        elif badge_count <= 4:
-            return 0.45
-        else:
-            return 0.65
+        <div class="poc-container">
+            <aside class="sidebar" id="sidebar">
+                <button class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Fermer le menu">&times;</button>
 
-# =============================================================================
-# FONCTIONS UTILITAIRES (Pure Python)
-# =============================================================================
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Catégories</h3>
+                    <ul class="filter-list">
+                        <li class="filter-item"><a href="#">Données</a></li>
+                        <li class="filter-item"><a href="#">Finance</a></li>
+                        <li class="filter-item"><a href="#">Sports</a></li>
+                        <li class="filter-item"><a href="#">Météo</a></li>
+                        <li class="filter-item"><a href="#">Traduction</a></li>
+                    </ul>
+                </div>
 
-def get_current_timestamp():
-    """Timestamp actuel format ISO"""
-    import datetime
-    return datetime.datetime.now().isoformat()
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Filtrer par Badges</h3>
+                    <ul class="filter-list" id="badge-filters">
+                        </ul>
+                </div>
+            </aside>
 
-def get_historical_metrics(api_id: str):
-    """Simulation données historiques"""
-    historical = []
-    for i in range(10):  # 10 derniers jours
-        historical.append({
-            'uptime_percentage': 98.5 + (i * 0.1),
-            'avg_response_time': 150 - (i * 2),
-            'error_rate': max(2.0 - (i * 0.05), 0.1),
-            'security_score': min(7.0 + (i * 0.05), 10.0),
-            'timestamp': get_current_timestamp()
-        })
-    
-    return historical
+            <main class="main-content">
+                <div class="content-header">
+                    <div class="search-bar-wrapper">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" id="search-input" placeholder="Rechercher une API...">
+                    </div>
+                    <div class="controls-wrapper">
+                        <div class="toggle-switch">
+                            <label class="switch">
+                                <input type="checkbox" id="show-badged-only">
+                                <span class="slider"></span>
+                            </label>
+                            <label for="show-badged-only">Afficher uniquement les APIs avec badges</label>
+                        </div>
+                        <button id="sort-by-badges" class="sort-button">
+                            Trier par nombre de badges <i class="fa-solid fa-sort"></i>
+                        </button>
+                    </div>
+                </div>
 
-def validate_metrics_data(metrics: dict):
-    """🔧 NOUVELLE FONCTION : Validation complète des données d'entrée"""
+                <div class="api-grid" id="api-grid">
+                    <div class="loader-container">
+                        <div class="loader"></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
     
-    # Vérification champs obligatoires
-    required_fields = [
-        'api_id', 'uptime_percentage', 'avg_response_time', 
-        'total_requests', 'error_rate', 'active_users', 'security_score'
-    ]
-    
-    missing_fields = [field for field in required_fields if field not in metrics]
-    
-    if missing_fields:
-        raise HTTPException(
-            status_code=400, 
-            detail={
-                "error": "Missing required fields",
-                "missing_fields": missing_fields,
-                "required_fields": required_fields,
-                "received_fields": list(metrics.keys()),
-                "timestamp": get_current_timestamp()
-            }
-        )
-    
-    # Validation types et valeurs
-    validations = [
-        # Uptime
-        (isinstance(metrics.get('uptime_percentage'), (int, float)), 
-         "uptime_percentage must be numeric"),
-        (0 <= metrics.get('uptime_percentage', -1) <= 100, 
-         "uptime_percentage must be between 0 and 100"),
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- SÉLECTEURS DOM ---
+        const apiGrid = document.getElementById('api-grid');
+        const searchInput = document.getElementById('search-input');
+        const showBadgedOnlyToggle = document.getElementById('show-badged-only');
+        const sortByBadgesBtn = document.getElementById('sort-by-badges');
+        const badgeFiltersContainer = document.getElementById('badge-filters');
+        const tooltip = document.getElementById('tooltip');
+        const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+
+        // --- ÉTAT DE L'APPLICATION ---
+        let allApis = [];
+        let activeBadgeFilters = new Set();
+        let sortAsc = false;
+
+        // --- DÉFINITIONS DES BADGES (pour tooltips, icônes, etc.) ---
+        const badgeDetails = {
+            'trusted_api': { name: 'Trusted API', icon: 'fa-solid fa-circle-check', criteria: 'Uptime garanti supérieur à 99%. Fiabilité éprouvée.', className: 'badge-trusted' },
+            'lightning_fast': { name: 'Lightning Fast', icon: 'fa-solid fa-bolt', criteria: 'Temps de réponse moyen inférieur à 100ms.', className: 'badge-fast' },
+            'blazing_speed': { name: 'Blazing Speed', icon: 'fa-solid fa-rocket', criteria: 'Performance d\'élite avec un temps de réponse moyen sous les 50ms.', className: 'badge-blazing' },
+            'enterprise_ready': { name: 'Enterprise Ready', icon: 'fa-solid fa-shield-halved', criteria: 'Conforme aux standards entreprise avec un uptime de 99.9%+', className: 'badge-enterprise' },
+            'community_proven': { name: 'Community Proven', icon: 'fa-solid fa-users', criteria: 'Adoptée et validée par plus de 1000 développeurs actifs.', className: 'badge-community' },
+            'zero_downtime': { name: 'Zero Downtime', icon: 'fa-solid fa-gem', criteria: 'Disponibilité exceptionnelle de 99.99%+. Le summum de la fiabilité.', className: 'badge-downtime' },
+            'security_certified': { name: 'Security Certified', icon: 'fa-solid fa-lock', criteria: 'Audit de sécurité réussi et certification de conformité (ex: SOC 2).', className: 'badge-security' },
+            'high_volume_ready': { name: 'High Volume Ready', icon: 'fa-solid fa-chart-line', criteria: 'Capable de gérer plus de 10,000 requêtes par minute sans dégradation.', className: 'badge-volume' }
+        };
         
-        # Response time
-        (isinstance(metrics.get('avg_response_time'), (int, float)), 
-         "avg_response_time must be numeric"),
-        (metrics.get('avg_response_time', -1) >= 0, 
-         "avg_response_time must be >= 0"),
-        
-        # Total requests
-        (isinstance(metrics.get('total_requests'), int), 
-         "total_requests must be integer"),
-        (metrics.get('total_requests', -1) >= 0, 
-         "total_requests must be >= 0"),
-        
-        # Error rate
-        (isinstance(metrics.get('error_rate'), (int, float)), 
-         "error_rate must be numeric"),
-        (0 <= metrics.get('error_rate', -1) <= 100, 
-         "error_rate must be between 0 and 100"),
-        
-        # Active users
-        (isinstance(metrics.get('active_users'), int), 
-         "active_users must be integer"),
-        (metrics.get('active_users', -1) >= 0, 
-         "active_users must be >= 0"),
-        
-        # Security score
-        (isinstance(metrics.get('security_score'), (int, float)), 
-         "security_score must be numeric"),
-        (0 <= metrics.get('security_score', -1) <= 10, 
-         "security_score must be between 0 and 10"),
-        
-        # API ID
-        (isinstance(metrics.get('api_id'), str) and len(metrics.get('api_id', '')) > 0, 
-         "api_id must be non-empty string")
-    ]
-    
-    # Vérification de chaque validation
-    for is_valid, error_message in validations:
-        if not is_valid:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "Invalid data format",
-                    "message": error_message,
-                    "received_data": metrics,
-                    "timestamp": get_current_timestamp()
+        const premiumBadges = new Set(['enterprise_ready', 'zero_downtime']);
+
+        // --- FONCTIONS ---
+
+        /**
+         * Récupère les données de l'API
+         */
+        async function fetchApiData() {
+            try {
+                const response = await fetch('https://api-performance-badge-system.onrender.com/demo-data');
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
                 }
-            )
-    
-    return True
+                const data = await response.json();
+                allApis = data.demo_apis;
+                populateBadgeFilters();
+                renderApis();
+            } catch (error) {
+                apiGrid.innerHTML = `<p class="no-results">Impossible de charger les données des APIs. Veuillez réessayer plus tard.</p>`;
+                console.error("Erreur lors de la récupération des données:", error);
+            }
+        }
 
-# =============================================================================
-# INSTANCES GLOBALES
-# =============================================================================
+        /**
+         * Crée et affiche les filtres de badges dans la sidebar
+         */
+        function populateBadgeFilters() {
+            let filterHtml = '';
+            for (const key in badgeDetails) {
+                const badge = badgeDetails[key];
+                filterHtml += `
+                    <li class="filter-item">
+                        <a data-badge-key="${key}">
+                            <span class="badge-filter-icon ${badge.className}"><i class="${badge.icon}"></i></span>
+                            ${badge.name}
+                        </a>
+                    </li>
+                `;
+            }
+            badgeFiltersContainer.innerHTML = filterHtml;
+            // Ajout des écouteurs après la création des éléments
+            document.querySelectorAll('#badge-filters a').forEach(filter => {
+                filter.addEventListener('click', handleBadgeFilterClick);
+            });
+        }
 
-badge_engine = BadgeCalculationEngine()
-commission_calc = CommissionCalculator()
+        /**
+         * Gère le clic sur un filtre de badge
+         */
+        function handleBadgeFilterClick(event) {
+            const link = event.currentTarget;
+            const badgeKey = link.dataset.badgeKey;
+            
+            link.classList.toggle('active');
+            if (activeBadgeFilters.has(badgeKey)) {
+                activeBadgeFilters.delete(badgeKey);
+            } else {
+                activeBadgeFilters.add(badgeKey);
+            }
+            renderApis();
+        }
 
-# =============================================================================
-# ENDPOINTS API
-# =============================================================================
+        /**
+         * Génère le HTML pour une seule carte d'API
+         */
+        function createApiCardHtml(api) {
+            const hasPremiumBadge = api.badges.some(b => premiumBadges.has(b));
+            const cardClasses = `api-card ${hasPremiumBadge ? 'is-premium' : ''}`;
+            const badgeCount = api.badges.length;
+            const trustScore = 20 + (badgeCount * 10); // Calcul simple du score de confiance
 
-@app.get("/")
-def root():
-    """Health check"""
-    return {
-        "service": "API Performance Badges Engine",
-        "status": "operational", 
-        "version": "1.0.1",  # Version corrigée
-        "dependencies": "FastAPI only",
-        "timestamp": get_current_timestamp(),
-        "fixes_applied": ["input_validation", "error_handling"]
-    }
+            let badgesHtml = '';
+            if (badgeCount > 0) {
+                badgesHtml = api.badges.map(badgeKey => {
+                    const badge = badgeDetails[badgeKey];
+                    if (!badge) return '';
+                    return `<span class="badge ${badge.className}" data-tooltip="${badge.criteria}">
+                                <i class="${badge.icon}"></i> ${badge.name}
+                            </span>`;
+                }).join('');
+            } else {
+                badgesHtml = '<p style="color: var(--text-light); font-size: 0.9em;">Cette API n\'a pas encore de badges.</p>';
+            }
 
-@app.post("/calculate-badges")
-def calculate_api_badges(metrics: dict):
-    """
-    🔧 ENDPOINT PRINCIPAL CORRIGÉ pour Nokia
-    Input: Métriques API
-    Output: Badges + Commission info
-    """
-    try:
-        # 🔧 VALIDATION COMPLÈTE DES DONNÉES (NOUVEAU)
-        validate_metrics_data(metrics)
-        
-        # Récupération historique simulé
-        historical_data = get_historical_metrics(metrics['api_id'])
-        
-        # Calcul badges
-        badges = badge_engine.calculate_badges(metrics, historical_data)
-        
-        # Calcul impact commission
-        commission_info = commission_calc.calculate_commission_impact(len(badges))
-        
-        return {
-            "success": True,
-            "api_id": metrics['api_id'],
-            "badges": badges,
-            "badge_summary": {
-                "total_badges": len(badges),
-                "badge_types": [badge['id'] for badge in badges],
-                "highest_confidence": max([badge['confidence_score'] for badge in badges], default=0.0)
-            },
-            "business_impact": commission_info,
-            "metadata": {
-                "calculated_at": get_current_timestamp(),
-                "algorithm_version": "1.0.1",
-                "processing_time_ms": 25,
-                "validation_passed": True
+            return `
+                <div class="${cardClasses}">
+                    <div class="card-header">
+                        <div>
+                            <h3 class="api-name">${api.name}</h3>
+                            ${hasPremiumBadge ? '<span class="revenue-indicator"><i class="fa-solid fa-arrow-trend-up"></i> Premium Revenue +</span>' : ''}
+                        </div>
+                        <span class="api-pricing">${api.pricing}</span>
+                    </div>
+                    <p class="api-description">${api.description}</p>
+                    
+                    ${hasPremiumBadge ? `
+                    <div class="trust-score">
+                        <div class="trust-score-label">
+                            <span>Score de confiance</span>
+                            <span>${trustScore}%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" style="width: ${trustScore}%;"></div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="badges-section">
+                        <div class="badges-header">
+                            <h4 class="badges-title">Badges de Performance</h4>
+                            <span class="badge-counter">${badgeCount} badge${badgeCount > 1 ? 's' : ''} gagné${badgeCount > 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="badges-container">
+                            ${badgesHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /**
+         * Affiche les APIs dans la grille après filtrage et tri
+         */
+        function renderApis() {
+            let apisToRender = [...allApis];
+
+            // 1. Filtrage par recherche
+            const searchTerm = searchInput.value.toLowerCase();
+            if (searchTerm) {
+                apisToRender = apisToRender.filter(api => api.name.toLowerCase().includes(searchTerm));
+            }
+
+            // 2. Filtrage "badgées uniquement"
+            if (showBadgedOnlyToggle.checked) {
+                apisToRender = apisToRender.filter(api => api.badges.length > 0);
+            }
+
+            // 3. Filtrage par badges sélectionnés
+            if (activeBadgeFilters.size > 0) {
+                apisToRender = apisToRender.filter(api => 
+                    [...activeBadgeFilters].every(filterKey => api.badges.includes(filterKey))
+                );
+            }
+
+            // Affichage du résultat
+            if (apisToRender.length > 0) {
+                apiGrid.innerHTML = apisToRender.map(createApiCardHtml).join('');
+            } else {
+                apiGrid.innerHTML = `<p class="no-results">Aucune API ne correspond à vos critères de recherche.</p>`;
             }
         }
         
-    except HTTPException:
-        # Re-raise HTTP exceptions (erreurs de validation)
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "Badge calculation failed",
-                "message": str(e),
-                "api_id": metrics.get('api_id', 'unknown'),
-                "timestamp": get_current_timestamp()
-            }
-        )
+        // --- GESTIONNAIRES D'ÉVÉNEMENTS ---
 
-@app.post("/bulk-calculate")
-def bulk_calculate_badges(api_metrics_list: List[dict]):
-    """🔧 Calcul badges en lot - AVEC VALIDATION"""
-    try:
-        results = []
-        validation_errors = []
+        searchInput.addEventListener('input', renderApis);
+        showBadgedOnlyToggle.addEventListener('change', renderApis);
+
+        sortByBadgesBtn.addEventListener('click', () => {
+            sortAsc = !sortAsc;
+            allApis.sort((a, b) => {
+                return sortAsc ? a.badges.length - b.badges.length : b.badges.length - a.badges.length;
+            });
+            sortByBadgesBtn.querySelector('i').className = sortAsc ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
+            renderApis();
+        });
+
+        // Gestion du tooltip (avec délégation d'événement)
+        apiGrid.addEventListener('mouseover', event => {
+            const target = event.target.closest('.badge[data-tooltip]');
+            if (!target) return;
+            
+            tooltip.textContent = target.dataset.tooltip;
+            tooltip.style.opacity = '1';
+            tooltip.style.visibility = 'visible';
+            
+            const rect = target.getBoundingClientRect();
+            tooltip.style.left = `${rect.left + rect.width / 2 - tooltip.offsetWidth / 2}px`;
+            tooltip.style.top = `${rect.top - tooltip.offsetHeight - 8}px`;
+        });
         
-        for i, metrics in enumerate(api_metrics_list):
-            try:
-                # Validation de chaque élément
-                validate_metrics_data(metrics)
-                
-                historical = get_historical_metrics(metrics['api_id'])
-                badges = badge_engine.calculate_badges(metrics, historical)
-                commission = commission_calc.calculate_commission_impact(len(badges))
-                
-                results.append({
-                    "api_id": metrics['api_id'],
-                    "badges": badges,
-                    "badge_count": len(badges),
-                    "commission_info": commission,
-                    "status": "success"
-                })
-                
-            except HTTPException as e:
-                validation_errors.append({
-                    "index": i,
-                    "api_id": metrics.get('api_id', f'unknown-{i}'),
-                    "error": e.detail,
-                    "status": "validation_failed"
-                })
-                continue
-            except Exception as e:
-                validation_errors.append({
-                    "index": i,
-                    "api_id": metrics.get('api_id', f'unknown-{i}'),
-                    "error": str(e),
-                    "status": "processing_failed"
-                })
-                continue
+        apiGrid.addEventListener('mouseout', event => {
+            const target = event.target.closest('.badge[data-tooltip]');
+            if (!target) return;
+
+            tooltip.style.opacity = '0';
+            tooltip.style.visibility = 'hidden';
+        });
         
-        return {
-            "success": len(results) > 0,
-            "processed_apis": len(api_metrics_list),
-            "successful_processing": len(results),
-            "failed_processing": len(validation_errors),
-            "results": results,
-            "errors": validation_errors,
-            "processing_summary": {
-                "total_badges_awarded": sum(r["badge_count"] for r in results),
-                "avg_badges_per_api": round(sum(r["badge_count"] for r in results) / len(results), 2) if results else 0,
-                "success_rate": f"{(len(results)/len(api_metrics_list)*100):.1f}%" if api_metrics_list else "0%",
-                "processed_at": get_current_timestamp()
-            }
-        }
+        // Gestion Menu Mobile
+        mobileMenuToggle.addEventListener('click', () => {
+            sidebar.classList.add('is-open');
+        });
         
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Bulk processing failed: {str(e)}")
+        sidebarCloseBtn.addEventListener('click', () => {
+            sidebar.classList.remove('is-open');
+        });
 
-@app.get("/badge-rules")
-def get_badge_rules():
-    """Documentation règles badges"""
-    return {
-        "available_badges": badge_engine.badge_rules,
-        "commission_structure": {
-            "base_commission": commission_calc.base_commission,
-            "max_commission": commission_calc.max_commission,
-            "badge_bonus": commission_calc.badge_bonus_per_badge
-        },
-        "algorithm_info": {
-            "confidence_threshold": 0.85,
-            "weighting_strategy": "temporal_decay",
-            "evaluation_method": "geometric_mean"
-        },
-        "validation_rules": {
-            "required_fields": [
-                "api_id", "uptime_percentage", "avg_response_time",
-                "total_requests", "error_rate", "active_users", "security_score"
-            ],
-            "field_constraints": {
-                "uptime_percentage": "0-100 (numeric)",
-                "avg_response_time": ">= 0 (numeric)",
-                "total_requests": ">= 0 (integer)",
-                "error_rate": "0-100 (numeric)", 
-                "active_users": ">= 0 (integer)",
-                "security_score": "0-10 (numeric)",
-                "api_id": "non-empty string"
-            }
-        }
-    }
-
-@app.post("/test-api")
-def test_with_sample_data():
-    """Endpoint test avec données d'exemple"""
-    sample_metrics = {
-        "api_id": "test-api-123",
-        "uptime_percentage": 99.5,
-        "avg_response_time": 75,
-        "total_requests": 15000,
-        "error_rate": 0.5,
-        "active_users": 2500,
-        "security_score": 9.2
-    }
-    
-    return calculate_api_badges(sample_metrics)
-
-@app.post("/test-validation")
-def test_validation_errors():
-    """🔧 NOUVEAU : Endpoint pour tester la validation"""
-    
-    # Test données incomplètes
-    incomplete_data = {"api_id": "test-incomplete", "uptime_percentage": 99.0}
-    
-    try:
-        validate_metrics_data(incomplete_data)
-        return {"validation": "should_have_failed", "status": "error"}
-    except HTTPException as e:
-        return {
-            "validation": "correctly_failed", 
-            "status": "success",
-            "error_details": e.detail,
-            "test_data": incomplete_data
-        }
-
-# =============================================================================
-# 🎁 BONUS: ENDPOINT DEMO POUR POC VISUEL
-# =============================================================================
-
-@app.get("/demo-data")
-def get_demo_data_for_poc():
-    """🎁 NOUVEAU : Données démo pour le POC visuel Gemini"""
-    
-    demo_apis = [
-        {
-            "api_id": "openai-gpt4",
-            "name": "OpenAI GPT-4 API",
-            "description": "Advanced AI language model with superior reasoning",
-            "category": "AI/ML",
-            "pricing": "$0.03/1K tokens",
-            "badges": ["🟢 Trusted API", "⚡ Lightning Fast", "🛡️ Enterprise Ready", "👥 Community Proven"],
-            "commission_tier": "premium",
-            "metrics": {
-                "uptime": 99.95,
-                "response_time": 45,
-                "users": 15000
-            }
-        },
-        {
-            "api_id": "weather-pro",
-            "name": "WeatherPro Global API", 
-            "description": "Accurate weather data for 200+ countries",
-            "category": "Weather",
-            "pricing": "$0.001/request",
-            "badges": ["🟢 Trusted API", "🚀 Blazing Speed", "📊 High Volume Ready"],
-            "commission_tier": "standard",
-            "metrics": {
-                "uptime": 99.8,
-                "response_time": 35,
-                "users": 8500
-            }
-        },
-        {
-            "api_id": "payment-secure",
-            "name": "SecurePay Processing",
-            "description": "PCI-compliant payment processing API",
-            "category": "Payments",
-            "pricing": "$0.30/transaction",
-            "badges": ["🛡️ Enterprise Ready", "🔒 Security Certified", "💎 Zero Downtime"],
-            "commission_tier": "premium",
-            "metrics": {
-                "uptime": 99.99,
-                "response_time": 120,
-                "users": 3200
-            }
-        },
-        {
-            "api_id": "basic-translator",
-            "name": "Quick Translate API",
-            "description": "Simple text translation service",
-            "category": "Translation",
-            "pricing": "Free tier available",
-            "badges": [],
-            "commission_tier": "basic",
-            "metrics": {
-                "uptime": 96.5,
-                "response_time": 300,
-                "users": 150
-            }
-        },
-        {
-            "api_id": "social-analytics",
-            "name": "SocialMetrics Analytics",
-            "description": "Comprehensive social media analytics platform",
-            "category": "Analytics", 
-            "pricing": "$29/month",
-            "badges": ["🟢 Trusted API", "👥 Community Proven"],
-            "commission_tier": "standard",
-            "metrics": {
-                "uptime": 99.2,
-                "response_time": 180,
-                "users": 2100
-            }
-        }
-    ]
-    
-    return {
-        "demo_apis": demo_apis,
-        "badge_definitions": badge_engine.badge_rules,
-        "total_apis": len(demo_apis),
-        "badged_apis": len([api for api in demo_apis if api["badges"]]),
-        "commission_tiers": {
-            "basic": {"rate": "20%", "color": "#gray"},
-            "standard": {"rate": "22-25%", "color": "#blue"}, 
-            "premium": {"rate": "26-30%", "color": "#gold"}
-        },
-        "generated_at": get_current_timestamp()
-    }
-
-# =============================================================================
-# DÉMARRAGE
-# =============================================================================
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+        // --- INITIALISATION ---
+        fetchApiData();
+    });
+    </script>
+</body>
+</html>
